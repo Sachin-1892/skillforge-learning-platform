@@ -1,0 +1,140 @@
+/* ================================
+   Global App Styles
+================================ */
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ================================
+   App Container
+================================ */
+
+.app {
+  width: min(100% - 32px, 1000px);
+  margin: 0 auto;
+  padding: 40px 0;
+}
+
+/* ================================
+   Welcome
+================================ */
+
+.welcome {
+  margin-bottom: 24px;
+}
+
+/* ================================
+   Counter
+================================ */
+
+.counter {
+  margin-bottom: 32px;
+}
+
+.counter p {
+  margin: 8px 0;
+}
+
+/* ================================
+   Buttons
+================================ */
+
+button {
+  padding: 10px 18px;
+  margin: 8px 8px 8px 0;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #111;
+  color: white;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+button:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* ================================
+   User Card
+================================ */
+
+.user-card {
+  padding: 20px;
+  margin-bottom: 32px;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  max-width: 400px;
+}
+
+/* ================================
+   Course List
+================================ */
+
+.course-list {
+  margin-top: 32px;
+}
+
+/* ================================
+   Course Card
+================================ */
+
+.course-card {
+  padding: 20px;
+  margin: 12px 0;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  max-width: 400px;
+
+  background: white;
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.course-card h3 {
+  margin: 0 0 8px;
+}
+
+.course-card p {
+  margin: 0;
+  color: #666;
+}
+
+/* ================================
+   Responsive Design
+================================ */
+
+@media (max-width: 600px) {
+  .app {
+    width: min(100% - 24px, 1000px);
+    padding: 24px 0;
+  }
+
+  .course-card,
+  .user-card {
+    max-width: none;
+  }
+}
