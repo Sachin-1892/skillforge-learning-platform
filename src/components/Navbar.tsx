@@ -2,23 +2,46 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useLearning } from '../context/LearningContext'
-import { usePerformance, PerformanceMode } from '../context/PerformanceContext'
+import { usePerformance } from '../context/PerformanceContext'
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname()
-  const { progress, isLoaded } = useLearning()
-  const { mode, effectiveMode, isLowEndDetected, deviceInfo, setMode } = usePerformance()
+  const router = useRouter()
+  const { progress, isLoaded, role, setRole } = useLearning()
+  const { mode, effectiveMode, setMode, deviceInfo } = usePerformance()
   const [showPerfMenu, setShowPerfMenu] = useState(false)
 
-  const navLinks = [
+  const isAdminView = pathname.startsWith('/admin') || role === 'admin'
+
+  const studentNavLinks = [
     { href: '/', label: 'Explore' },
     { href: '/courses', label: 'Courses' },
     { href: '/roadmaps', label: 'Roadmaps' },
     { href: '/quizzes', label: 'Quizzes' },
     { href: '/dashboard', label: 'My Dashboard' }
   ]
+
+  const adminNavLinks = [
+    { href: '/admin', label: '📊 Overview' },
+    { href: '/admin/courses', label: '📚 Courses' },
+    { href: '/admin/quizzes', label: '⚡ Quizzes' },
+    { href: '/admin/roadmaps', label: '🗺️ Roadmaps' },
+    { href: '/admin/analytics', label: '📈 Analytics' }
+  ]
+
+  const navLinks = isAdminView ? adminNavLinks : studentNavLinks
+
+  const handleRoleToggle = () => {
+    if (isAdminView) {
+      setRole('student')
+      router.push('/')
+    } else {
+      setRole('admin')
+      router.push('/admin')
+    }
+  }
 
   const getModeLabel = () => {
     if (mode === 'auto') {
@@ -33,26 +56,46 @@ export const Navbar: React.FC = () => {
   return (
     <header className="navbar">
       <div className="navbar-inner">
-        <Link href="/" className="navbar-brand">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'url(#brandGrad)' }}>
-            <defs>
-              <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#6366f1" />
-                <stop offset="100%" stopColor="#a855f7" />
-              </linearGradient>
-            </defs>
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
-            <path d="M6 6h10" />
-            <path d="M6 10h10" />
-          </svg>
-          SkillForge
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Link href={isAdminView ? '/admin' : '/'} className="navbar-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'url(#brandGrad)' }}>
+              <defs>
+                <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+              <path d="M6 6h10" />
+              <path d="M6 10h10" />
+            </svg>
+            SkillForge
+          </Link>
+
+          {/* Active Panel Badge */}
+          <span
+            style={{
+              fontSize: '11px',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              letterSpacing: '0.4px',
+              background: isAdminView ? 'rgba(244, 63, 94, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+              color: isAdminView ? '#fb7185' : '#818cf8',
+              border: `1px solid ${isAdminView ? 'rgba(244, 63, 94, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`
+            }}
+          >
+            {isAdminView ? 'ADMIN STUDIO' : 'STUDENT PORTAL'}
+          </span>
+        </div>
 
         {/* Navigation Links */}
         <nav className="navbar-links">
           {navLinks.map((link) => {
             const isActive =
-              link.href === '/' ? pathname === '/' : pathname.startsWith(link.href)
+              link.href === '/' || link.href === '/admin'
+                ? pathname === link.href
+                : pathname.startsWith(link.href)
             return (
               <Link
                 key={link.href}
@@ -65,7 +108,7 @@ export const Navbar: React.FC = () => {
           })}
         </nav>
 
-        {/* Actions & Performance Switch */}
+        {/* Actions & Role Switcher */}
         <div className="navbar-actions">
           {/* Performance Switch Button */}
           <div style={{ position: 'relative' }}>
@@ -170,15 +213,15 @@ export const Navbar: React.FC = () => {
 
                 {deviceInfo.cores && (
                   <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--text-muted)' }}>
-                    Detected: {deviceInfo.cores} Cores • {deviceInfo.memoryGb || '4+'}GB RAM {deviceInfo.saveData ? '• Data Saver On' : ''}
+                    Detected: {deviceInfo.cores} Cores • {deviceInfo.memoryGb || '4+'}GB RAM
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Student Live Stats */}
-          {isLoaded && (
+          {/* Student Stats (shown in student view) */}
+          {!isAdminView && isLoaded && (
             <>
               <div className="stat-pill streak" title="Current Daily Streak">
                 <span>🔥</span>
@@ -191,9 +234,15 @@ export const Navbar: React.FC = () => {
             </>
           )}
 
-          <Link href="/dashboard" className="btn btn-primary btn-sm">
-            Student Hub
-          </Link>
+          {/* Master Panel Switcher Button */}
+          <button
+            onClick={handleRoleToggle}
+            className={`btn btn-sm ${isAdminView ? 'btn-secondary' : 'btn-primary'}`}
+            style={{ fontWeight: 700 }}
+            title={isAdminView ? 'Switch to Student View' : 'Switch to Admin Management Studio'}
+          >
+            {isAdminView ? '🎓 Student View' : '🛠️ Admin Studio'}
+          </button>
         </div>
       </div>
     </header>

@@ -18,13 +18,18 @@ import {
   INITIAL_GOALS
 } from '../data/mockData'
 
+export type UserRole = 'student' | 'admin'
+
 interface LearningContextType {
+  role: UserRole
+  setRole: (role: UserRole) => void
   courses: Course[]
   quizzes: Quiz[]
   roadmaps: SkillRoadmap[]
   badges: Badge[]
   progress: StudentProgress
   isLoaded: boolean
+  // Student Actions
   enrollCourse: (courseId: string) => void
   isEnrolled: (courseId: string) => boolean
   toggleLectureCompletion: (courseId: string, lectureId: string) => void
@@ -54,9 +59,21 @@ interface LearningContextType {
     period: 'daily' | 'weekly'
   ) => void
   resetProgress: () => void
+  // Admin Actions (CRUD)
+  addCourse: (courseData: Omit<Course, 'id'>) => string
+  updateCourse: (courseId: string, updated: Partial<Course>) => void
+  deleteCourse: (courseId: string) => void
+  addQuiz: (quizData: Omit<Quiz, 'id'>) => string
+  deleteQuiz: (quizId: string) => void
+  addRoadmap: (roadmapData: Omit<SkillRoadmap, 'id'>) => string
+  deleteRoadmap: (roadmapId: string) => void
 }
 
-const STORAGE_KEY = 'skillforge_student_progress_v1'
+const STORAGE_KEY_PROGRESS = 'skillforge_student_progress_v1'
+const STORAGE_KEY_COURSES = 'skillforge_courses_v1'
+const STORAGE_KEY_QUIZZES = 'skillforge_quizzes_v1'
+const STORAGE_KEY_ROADMAPS = 'skillforge_roadmaps_v1'
+const STORAGE_KEY_ROLE = 'skillforge_user_role_v1'
 
 const DEFAULT_PROGRESS: StudentProgress = {
   enrolledCourseIds: ['frontend-mastery'],
@@ -75,20 +92,40 @@ const LearningContext = createContext<LearningContextType | undefined>(undefined
 export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({
   children
 }) => {
-  const [courses] = useState<Course[]>(INITIAL_COURSES)
-  const [quizzes] = useState<Quiz[]>(INITIAL_QUIZZES)
-  const [roadmaps] = useState<SkillRoadmap[]>(INITIAL_ROADMAPS)
+  const [role, setRoleState] = useState<UserRole>('student')
+  const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES)
+  const [quizzes, setQuizzes] = useState<Quiz[]>(INITIAL_QUIZZES)
+  const [roadmaps, setRoadmaps] = useState<SkillRoadmap[]>(INITIAL_ROADMAPS)
   const [badges] = useState<Badge[]>(INITIAL_BADGES)
   const [isLoaded, setIsLoaded] = useState(false)
-
   const [progress, setProgress] = useState<StudentProgress>(DEFAULT_PROGRESS)
 
-  // Hydrate from localStorage once mounted on client to prevent Next.js hydration mismatch
+  // Hydrate from localStorage once mounted
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        setProgress(JSON.parse(saved))
+      const savedRole = localStorage.getItem(STORAGE_KEY_ROLE) as UserRole | null
+      if (savedRole && (savedRole === 'student' || savedRole === 'admin')) {
+        setRoleState(savedRole)
+      }
+
+      const savedCourses = localStorage.getItem(STORAGE_KEY_COURSES)
+      if (savedCourses) {
+        setCourses(JSON.parse(savedCourses))
+      }
+
+      const savedQuizzes = localStorage.getItem(STORAGE_KEY_QUIZZES)
+      if (savedQuizzes) {
+        setQuizzes(JSON.parse(savedQuizzes))
+      }
+
+      const savedRoadmaps = localStorage.getItem(STORAGE_KEY_ROADMAPS)
+      if (savedRoadmaps) {
+        setRoadmaps(JSON.parse(savedRoadmaps))
+      }
+
+      const savedProgress = localStorage.getItem(STORAGE_KEY_PROGRESS)
+      if (savedProgress) {
+        setProgress(JSON.parse(savedProgress))
       }
     } catch {
       // ignore
@@ -100,12 +137,26 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (!isLoaded) return
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+      localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(progress))
+      localStorage.setItem(STORAGE_KEY_COURSES, JSON.stringify(courses))
+      localStorage.setItem(STORAGE_KEY_QUIZZES, JSON.stringify(quizzes))
+      localStorage.setItem(STORAGE_KEY_ROADMAPS, JSON.stringify(roadmaps))
+      localStorage.setItem(STORAGE_KEY_ROLE, role)
     } catch (e) {
-      console.error('Failed to save progress to localStorage', e)
+      console.error('Failed to sync state to localStorage', e)
     }
-  }, [progress, isLoaded])
+  }, [progress, courses, quizzes, roadmaps, role, isLoaded])
 
+  const setRole = (newRole: UserRole) => {
+    setRoleState(newRole)
+    try {
+      localStorage.setItem(STORAGE_KEY_ROLE, newRole)
+    } catch {
+      // ignore
+    }
+  }
+
+  // --- Student Actions ---
   const enrollCourse = (courseId: string) => {
     setProgress((prev) => {
       if (prev.enrolledCourseIds.includes(courseId)) return prev
@@ -145,7 +196,6 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
-      // Update daily goal if completed
       const updatedGoals = prev.goals.map((g) => {
         if (g.id === 'goal-lectures') {
           const nextCount = Math.max(0, g.currentCount + (alreadyCompleted ? -1 : 1))
@@ -331,16 +381,64 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const resetProgress = () => {
     setProgress(DEFAULT_PROGRESS)
+    setCourses(INITIAL_COURSES)
+    setQuizzes(INITIAL_QUIZZES)
+    setRoadmaps(INITIAL_ROADMAPS)
     try {
-      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(STORAGE_KEY_PROGRESS)
+      localStorage.removeItem(STORAGE_KEY_COURSES)
+      localStorage.removeItem(STORAGE_KEY_QUIZZES)
+      localStorage.removeItem(STORAGE_KEY_ROADMAPS)
     } catch {
       // ignore
     }
   }
 
+  // --- Admin CRUD Actions ---
+  const addCourse = (courseData: Omit<Course, 'id'>) => {
+    const id = `course-${Date.now()}`
+    const newCourse: Course = { ...courseData, id }
+    setCourses((prev) => [newCourse, ...prev])
+    return id
+  }
+
+  const updateCourse = (courseId: string, updated: Partial<Course>) => {
+    setCourses((prev) =>
+      prev.map((c) => (c.id === courseId ? { ...c, ...updated } : c))
+    )
+  }
+
+  const deleteCourse = (courseId: string) => {
+    setCourses((prev) => prev.filter((c) => c.id !== courseId))
+  }
+
+  const addQuiz = (quizData: Omit<Quiz, 'id'>) => {
+    const id = `quiz-${Date.now()}`
+    const newQuiz: Quiz = { ...quizData, id }
+    setQuizzes((prev) => [newQuiz, ...prev])
+    return id
+  }
+
+  const deleteQuiz = (quizId: string) => {
+    setQuizzes((prev) => prev.filter((q) => q.id !== quizId))
+  }
+
+  const addRoadmap = (roadmapData: Omit<SkillRoadmap, 'id'>) => {
+    const id = `roadmap-${Date.now()}`
+    const newRoadmap: SkillRoadmap = { ...roadmapData, id }
+    setRoadmaps((prev) => [...prev, newRoadmap])
+    return id
+  }
+
+  const deleteRoadmap = (roadmapId: string) => {
+    setRoadmaps((prev) => prev.filter((r) => r.id !== roadmapId))
+  }
+
   return (
     <LearningContext.Provider
       value={{
+        role,
+        setRole,
         courses,
         quizzes,
         roadmaps,
@@ -358,7 +456,14 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({
         getRoadmapProgress,
         toggleGoal,
         addCustomGoal,
-        resetProgress
+        resetProgress,
+        addCourse,
+        updateCourse,
+        deleteCourse,
+        addQuiz,
+        deleteQuiz,
+        addRoadmap,
+        deleteRoadmap
       }}
     >
       {children}

@@ -101,3 +101,60 @@ describe('Student Learning Logic & Math', () => {
     expect(failed.xpGained).toBe(25)
   })
 })
+
+describe('Admin Panel Operations & Course Management', () => {
+  it('adds and removes courses dynamically', () => {
+    let courses = [...INITIAL_COURSES]
+    const newCourse = {
+      id: 'course-test-1',
+      title: 'Docker & Kubernetes Masterclass',
+      shortDescription: 'Containerize and orchestrate apps.',
+      fullDescription: 'Full course description.',
+      category: 'Backend' as const,
+      level: 'Intermediate' as const,
+      thumbnail: 'https://example.com/thumb.jpg',
+      totalDurationHours: 12,
+      rating: 5,
+      enrolledStudentsCount: 0,
+      tags: ['Docker'],
+      instructor: {
+        name: 'Jane Doe',
+        role: 'DevOps Lead',
+        avatar: 'https://example.com/avatar.jpg',
+        bio: 'DevOps expert'
+      },
+      modules: []
+    }
+
+    // Add
+    courses = [newCourse, ...courses]
+    expect(courses.length).toBe(INITIAL_COURSES.length + 1)
+    expect(courses[0].title).toBe('Docker & Kubernetes Masterclass')
+
+    // Delete
+    courses = courses.filter((c) => c.id !== 'course-test-1')
+    expect(courses.length).toBe(INITIAL_COURSES.length)
+  })
+
+  it('adds and removes quizzes dynamically', () => {
+    let quizzes = [...INITIAL_QUIZZES]
+    const newQuiz = {
+      id: 'quiz-docker',
+      title: 'Docker Fundamentals Quiz',
+      topic: 'DevOps',
+      level: 'Beginner' as const,
+      timeLimitMinutes: 10,
+      xpReward: 120,
+      questions: []
+    }
+
+    // Add
+    quizzes = [newQuiz, ...quizzes]
+    expect(quizzes.length).toBe(INITIAL_QUIZZES.length + 1)
+
+    // Delete
+    quizzes = quizzes.filter((q) => q.id !== 'quiz-docker')
+    expect(quizzes.length).toBe(INITIAL_QUIZZES.length)
+  })
+})
+
